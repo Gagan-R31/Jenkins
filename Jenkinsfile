@@ -4,64 +4,109 @@ pipeline {
         githubPush()
     }
     environment {
-        
-        BRANCH_NAME = ""
+        GITHUB_TOKEN = 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
+        REPO_OWNER = "Gagan-R31"
+        REPO_NAME = "Jenkins"
+        PR_NUMBER = ""
     }
-
     stages {
         stage('Cleanup') {
             steps {
                 script {
-                    // Remove the existing directory if it exists
                     sh 'rm -rf *'
                 }
             }
         }
-
-
         stage('Checkout') {
             steps {
                 script {
-                    // Checkout the 'TEST' branch
-                    checkout([$class: 'GitSCM', branches: [[name: '*/TEST']],
-                        userRemoteConfigs: [[url: "https://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@github.com/Gagan-R31/Jenkins.git"]]])
+                    checkout scm
                 }
             }
         }
-
         stage('Run Script') {
             steps {
                 script {
-                    // Ensure the script runs from the correct path
                     sh 'python3 test_script.py'
                 }
             }
         }
-
-        stage('Create Pull Request') {
-            steps {
-                script {
-                    // Extract branch name from GIT_BRANCH
-                    def branchName = env.GIT_BRANCH.split('/').last()
-                    echo "Current branch: ${branchName}"
-
-                    if (branchName == 'TEST') {
-                        def response = sh(script: '''
-                            curl -X POST -H "Authorization: token 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" \
-                            -d \'{
-                                "title": "Merge TEST into main",
-                                "head": "TEST",
-                                "base": "main"
-                            }\' \
-                            https://api.github.com/repos/Gagan-R31/Jenkins/pulls
-                        ''', returnStdout: true).trim()
-                        
-                        echo "Pull Request Response: ${response}"
-                    } else {
-                        echo "Not on the TEST branch, skipping pull request creation."
-                    }
-                }
+    }
+    post {
+        always {
+            script {
+                closeExistingPullRequests()
+            }
+        }
+        success {
+            script {
+                createNewPullRequest()
+            }
+        }
+        failure {
+            script {
+                updateGitHubStatus("failure", "Pipeline failed")
             }
         }
     }
+}
+
+def closeExistingPullRequests() {
+    def response = sh(script: """
+        curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+        https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open
+    """, returnStdout: true).trim()
+    
+    def pullRequests = readJSON text: response
+    
+    pullRequests.each { pr ->
+        if (pr.head.ref == 'TEST' && pr.base.ref == 'main') {
+            sh """
+                curl -X PATCH -H "Authorization: token ${GITHUB_TOKEN}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pr.number} \
+                -d '{"state":"closed"}'
+            """
+            echo "Closed pull request #${pr.number}"
+        }
+    }
+}
+
+def createNewPullRequest() {
+    def currentDate = new Date().format("yyyyMMdd-HHmmss")
+    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+    def prTitle = "Merge ${branchName} into main - ${currentDate}"
+    
+    def response = sh(script: """
+        curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
+        -H "Accept: application/vnd.github.v3+json" \
+        https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls \
+        -d '{
+            "title": "${prTitle}",
+            "head": "${branchName}",
+            "base": "main"
+        }'
+    """, returnStdout: true).trim()
+    
+    def pullRequest = readJSON text: response
+    PR_NUMBER = pullRequest.number
+    echo "Created new pull request #${PR_NUMBER}"
+    
+    updateGitHubStatus("success", "Pipeline succeeded")
+}
+
+def updateGitHubStatus(state, description) {
+    def sha = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+    sh """
+        curl -H "Authorization: token ${GITHUB_TOKEN}" \
+             -H "Accept: application/vnd.github.v3+json" \
+             -X POST \
+             https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/statuses/${sha} \
+             -d '{
+                 "state": "${state}",
+                 "target_url": "${BUILD_URL}",
+                 "description": "${description}",
+                 "context": "continuous-integration/jenkins"
+             }'
+    """
 }
