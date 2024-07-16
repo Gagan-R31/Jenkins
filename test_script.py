@@ -1,3 +1,3 @@
 # test_script.py
 print("pipeline works")
-print("welcome")
+print("welcome to INI8 Labs")
