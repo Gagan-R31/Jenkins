@@ -57,7 +57,7 @@ def closeExistingPullRequests() {
         https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open
     """, returnStdout: true).trim()
     
-    def pullRequests = new groovy.json.JsonSlurper().parseText(response)
+    def pullRequests = parseJSON(response)
     
     pullRequests.each { pr ->
         if (pr.head.ref == 'TEST' && pr.base.ref == 'main') {
@@ -88,7 +88,7 @@ def createNewPullRequest() {
         }'
     """, returnStdout: true).trim()
     
-    def pullRequest = new groovy.json.JsonSlurper().parseText(response)
+    def pullRequest = parseJSON(response)
     PR_NUMBER = pullRequest.number
     echo "Created new pull request #${PR_NUMBER}"
     
@@ -109,4 +109,9 @@ def updateGitHubStatus(state, description) {
                  "context": "continuous-integration/jenkins"
              }'
     """
+}
+
+@NonCPS
+def parseJSON(String json) {
+    return new groovy.json.JsonSlurperClassic().parseText(json)
 }
