@@ -5,8 +5,8 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    // Remove the existing Jenkins directory if it exists
-                    sh 'rm -rf Jenkins'
+                    // Remove the existing directory if it exists
+                    sh 'rm -rf *'
                 }
             }
         }
@@ -23,18 +23,21 @@ pipeline {
 
         stage('Run Script') {
             steps {
-                sh 'python3 Jenkins/test_script.py'
+                script {
+                    // Ensure the script runs from the correct path
+                    sh 'python3 test_script.py'
+                }
             }
         }
 
         stage('Create Pull Request') {
             when {
-                expression { env.BRANCH_NAME == 'TEST' }
+                branch 'TEST'
             }
             steps {
                 script {
                     def response = sh(script: '''
-                        curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
+                        curl -X POST -H "Authorization: token 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" \
                         -d \'{
                             "title": "Merge TEST into main",
                             "head": "TEST",
@@ -49,4 +52,3 @@ pipeline {
         }
     }
 }
-
