@@ -1,7 +1,7 @@
 pipeline {
     agent any
     triggers {
-        githubPush()
+        githubPush() // Trigger the pipeline on GitHub push event
     }
     environment {
         GITHUB_TOKEN = "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"
@@ -13,21 +13,21 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    sh 'rm -rf *'
+                    sh 'rm -rf *' // Clean up the workspace
                 }
             }
         }
         stage('Checkout') {
             steps {
                 script {
-                    checkout scm
+                    checkout scm // Check out the source code
                 }
             }
         }
         stage('Run Script') {
             steps {
                 script {
-                    sh 'python3 test_script.py'
+                    sh 'python3 test_script.py' // Run the Python script
                 }
             }
         }
@@ -35,17 +35,17 @@ pipeline {
     post {
         always {
             script {
-                closeExistingPullRequests()
+                closeExistingPullRequests() // Close existing PRs always
             }
         }
         success {
             script {
-                createNewPullRequest()
+                createNewPullRequest() // Create a new PR on success
             }
         }
         failure {
             script {
-                updateGitHubStatus("failure", "Pipeline failed")
+                updateGitHubStatus("failure", "Pipeline failed") // Update GitHub status on failure
             }
         }
     }
