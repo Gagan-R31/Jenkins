@@ -2,20 +2,28 @@ pipeline {
     agent any
 
     stages {
+        stage('Cleanup') {
+            steps {
+                script {
+                    // Remove the existing Jenkins directory if it exists
+                    sh 'rm -rf Jenkins'
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        // Checkout the 'TEST' branch
-                        sh 'git clone https://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@github.com/Gagan-R31/Jenkins.git -b TEST'
-                    }
+                    // Checkout the 'TEST' branch
+                    checkout([$class: 'GitSCM', branches: [[name: '*/TEST']],
+                              userRemoteConfigs: [[url: "https://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@github.com/Gagan-R31/Jenkins.git"]]])
                 }
             }
         }
 
         stage('Run Script') {
             steps {
-                sh 'python3 test_script.py'
+                sh 'python3 Jenkins/test_script.py'
             }
         }
 
