@@ -7,7 +7,7 @@ pipeline {
                 script {
                     // Checkout the 'TEST' branch
                     checkout([$class: 'GitSCM', branches: [[name: '*/TEST']],
-                              userRemoteConfigs: [[url: 'https://github.com/Gagan-R31/Jenkins.git']]])
+                              userRemoteConfigs: [[url: 'https://github.com/Gagan-R31/Jenkins']]])
                 }
             }
         }
