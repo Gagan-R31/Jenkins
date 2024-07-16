@@ -1,5 +1,10 @@
 pipeline {
     agent any
+    
+    environment {
+        
+        BRANCH_NAME = ""
+    }
 
     stages {
         stage('Cleanup') {
