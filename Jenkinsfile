@@ -52,63 +52,83 @@ pipeline {
 }
 
 def closeExistingPullRequests() {
-    def response = sh(script: """
-        curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
-        https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open
-    """, returnStdout: true).trim()
-    
-    def pullRequests = parseJSON(response)
-    
-    pullRequests.each { pr ->
-        if (pr.head.ref == 'TEST' && pr.base.ref == 'main') {
-            sh """
-                curl -X PATCH -H "Authorization: token ${GITHUB_TOKEN}" \
-                -H "Accept: application/vnd.github.v3+json" \
-                https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pr.number} \
-                -d '{"state":"closed"}'
-            """
-            echo "Closed pull request #${pr.number}"
+    try {
+        def response = sh(script: """
+            curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+            https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open
+        """, returnStdout: true).trim()
+        
+        def pullRequests = parseJSON(response)
+        
+        pullRequests.each { pr ->
+            if (pr.head.ref == 'TEST' && pr.base.ref == 'main') {
+                sh """
+                    curl -X PATCH -H "Authorization: token ${GITHUB_TOKEN}" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pr.number} \
+                    -d '{"state":"closed"}'
+                """
+                echo "Closed pull request #${pr.number}"
+            }
         }
+    } catch (Exception e) {
+        echo "Error in closeExistingPullRequests: ${e.message}"
     }
 }
 
 def createNewPullRequest() {
-    def currentDate = new Date().format("yyyyMMdd-HHmmss")
-    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-    def prTitle = "Merge ${branchName} into main - ${currentDate}"
-    
-    def response = sh(script: """
-        curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
-        -H "Accept: application/vnd.github.v3+json" \
-        https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls \
-        -d '{
-            "title": "${prTitle}",
-            "head": "${branchName}",
-            "base": "main"
-        }'
-    """, returnStdout: true).trim()
-    
-    def pullRequest = parseJSON(response)
-    PR_NUMBER = pullRequest.number
-    echo "Created new pull request #${PR_NUMBER}"
-    
-    updateGitHubStatus("success", "Pipeline succeeded")
+    try {
+        def currentDate = new Date().format("yyyyMMdd-HHmmss")
+        def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+        echo "Current branch: ${branchName}"
+        def prTitle = "Merge ${branchName} into main - ${currentDate}"
+        
+        def response = sh(script: """
+            curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls \
+            -d '{
+                "title": "${prTitle}",
+                "head": "${branchName}",
+                "base": "main"
+            }'
+        """, returnStdout: true).trim()
+        
+        echo "API Response: ${response}"
+        
+        def pullRequest = parseJSON(response)
+        if (pullRequest.number) {
+            PR_NUMBER = pullRequest.number
+            echo "Created new pull request #${PR_NUMBER}"
+            updateGitHubStatus("success", "Pipeline succeeded")
+        } else {
+            echo "Failed to create pull request. Response: ${response}"
+            updateGitHubStatus("failure", "Failed to create pull request")
+        }
+    } catch (Exception e) {
+        echo "Error in createNewPullRequest: ${e.message}"
+        updateGitHubStatus("failure", "Error creating pull request")
+    }
 }
 
 def updateGitHubStatus(state, description) {
-    def sha = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-    sh """
-        curl -H "Authorization: token ${GITHUB_TOKEN}" \
-             -H "Accept: application/vnd.github.v3+json" \
-             -X POST \
-             https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/statuses/${sha} \
-             -d '{
-                 "state": "${state}",
-                 "target_url": "${BUILD_URL}",
-                 "description": "${description}",
-                 "context": "continuous-integration/jenkins"
-             }'
-    """
+    try {
+        def sha = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+        sh """
+            curl -H "Authorization: token ${GITHUB_TOKEN}" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 -X POST \
+                 https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/statuses/${sha} \
+                 -d '{
+                     "state": "${state}",
+                     "target_url": "${BUILD_URL}",
+                     "description": "${description}",
+                     "context": "continuous-integration/jenkins"
+                 }'
+        """
+    } catch (Exception e) {
+        echo "Error in updateGitHubStatus: ${e.message}"
+    }
 }
 
 @NonCPS
