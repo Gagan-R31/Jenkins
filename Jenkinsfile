@@ -21,25 +21,24 @@ pipeline {
 
         stage('Create Pull Request') {
             when {
-                branch 'TEST'
+                expression { env.BRANCH_NAME == 'TEST' }
             }
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        def response = sh(script: '''
-                            curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
-                            -d \'{
-                                "title": "Merge TEST into main",
-                                "head": "TEST",
-                                "base": "main"
-                            }\' \
-                            https://api.github.com/repos/Gagan-R31/Jenkins/pulls
-                        ''', returnStdout: true).trim()
-                        
-                        echo "Pull Request Response: ${response}"
-                    }
+                    def response = sh(script: '''
+                        curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
+                        -d \'{
+                            "title": "Merge TEST into main",
+                            "head": "TEST",
+                            "base": "main"
+                        }\' \
+                        https://api.github.com/repos/Gagan-R31/Jenkins/pulls
+                    ''', returnStdout: true).trim()
+                    
+                    echo "Pull Request Response: ${response}"
                 }
             }
         }
     }
 }
+
