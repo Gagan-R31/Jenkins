@@ -21,7 +21,8 @@ pipeline {
                 script {
                     // Checkout the 'TEST' branch
                     checkout([$class: 'GitSCM', branches: [[name: '*/TEST']],
-                              userRemoteConfigs: [[url: "https://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@github.com/Gagan-R31/Jenkins.git"]]])
+                        userRemoteConfigs: [[url: "https://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@github.com/Gagan-R31/Jenkins.git"]]])
+                    
                     // Capture the branch name
                     env.BRANCH_NAME = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
                     echo "Checked out branch: ${env.BRANCH_NAME}"
@@ -38,13 +39,13 @@ pipeline {
             }
         }
 
-
         stage('Create Pull Request') {
             steps {
                 script {
+                    echo "Current branch: ${env.BRANCH_NAME}"
                     if (env.BRANCH_NAME == 'TEST') {
                         def response = sh(script: '''
-                            curl -X POST -H "Authorization: token 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" \
+                            curl -X POST -H "Authorization: token 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}" \
                             -d \'{
                                 "title": "Merge TEST into main",
                                 "head": "TEST",
