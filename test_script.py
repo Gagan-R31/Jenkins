@@ -4,4 +4,3 @@ print("welcome to INI8 Labs")
 print("ola")
 print("ola")
 print("ola")
-sadasdasd
