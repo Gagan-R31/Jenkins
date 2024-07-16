@@ -4,7 +4,7 @@ pipeline {
         githubPush()
     }
     environment {
-        GITHUB_TOKEN = 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
+        GITHUB_TOKEN = "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"
         REPO_OWNER = "Gagan-R31"
         REPO_NAME = "Jenkins"
         PR_NUMBER = ""
