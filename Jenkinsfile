@@ -78,10 +78,14 @@ def closeExistingPullRequests() {
 
 def createNewPullRequest() {
     try {
+        def currentBranch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+        echo "Current branch: ${currentBranch}"
+        
+        // Ensure the branch exists on the remote
+        sh "git push origin ${currentBranch}"
+        
         def currentDate = new Date().format("yyyyMMdd-HHmmss")
-        def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-        echo "Current branch: ${branchName}"
-        def prTitle = "Merge ${branchName} into main - ${currentDate}"
+        def prTitle = "Merge ${currentBranch} into main - ${currentDate}"
         
         def response = sh(script: """
             curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
@@ -89,7 +93,7 @@ def createNewPullRequest() {
             https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls \
             -d '{
                 "title": "${prTitle}",
-                "head": "${branchName}",
+                "head": "${REPO_OWNER}:${currentBranch}",
                 "base": "main"
             }'
         """, returnStdout: true).trim()
