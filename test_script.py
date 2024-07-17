@@ -2,5 +2,4 @@
 print("pipeline works")
 print("welcome to INI8 Labs")
 print("welcome to banaglore")
-asdajdakd
-dasd
+
