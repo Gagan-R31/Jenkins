@@ -5,7 +5,7 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN = "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"
+        GITHUB_TOKEN = "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"
 
     }
 
